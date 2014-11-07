@@ -1,28 +1,55 @@
 --Haskell--
 import System.Console.GetOpt
+import System.Environment
 import Control.Monad
-import Control.Applicative
-import Data.List
-import Data.Map
 
-data Flag = Verbose
-			| Help
-			| All
-			| Human
-			| ByExt
-			| ByCount
-			| Total
+helpText :: String
+helpText = unlines 
+			[ "kvak"
+			, "brak"
+			]	
 
-data Options = Options
+data Options = Options	{ optVerbose :: Bool
+						, optHelp :: Bool
+						, optAll :: Bool
+						, optHuman :: Bool
+						, optExt :: Bool
+						, optCount :: Bool
+						, optTotal :: Bool
+						} deriving (Show)
 
-options :: [OptDescr Flag]
+defaultOptions :: Options
+defaultOptions = Options { optVerbose = False
+						 , optHelp = False
+						 , optAll = False
+						 , optTotal= False
+						 , optExt= False
+						 , optCount= False
+						 , optHuman= False
+						 }
+
+printHelp :: IO ()
+printHelp = putStrLn helpText
+
+options :: [OptDescr (Options -> IO Options)]
 options = 
-		[	Option ['v'] ["verbose"] (NoArg Verbose) "verbose"
-		,   Option ['h'] ["help"]   (NoArg Help) "help"
-		,   Option ['a'] ["all"]    (NoArg All) "all"
+		[ Option 	"h" 	["help"]	   		(NoArg (\opts -> return opts { optHelp = True} )) 			"Help"
+		, Option 	"a" 	["all"]    			(NoArg (\opts -> return opts { optVerbose = True} )) 		"Hidden files"
+		, Option 	"v" 	["verbose"] 		(NoArg (\opts -> return opts { optVerbose = True} )) 		"Verbose"
+		, Option 	"e"	 	["extension"] 		(NoArg (\opts -> return opts { optVerbose = True} )) 		"Sort by extensions"
+		, Option 	"c" 	["count"] 			(NoArg (\opts -> return opts { optVerbose = True} )) 		"Sort by count of files"
+		, Option 	"t" 	["total"]			(NoArg (\opts -> return opts { optVerbose = True} )) 		"Show total number of files"
 		]
 
-str :: String -> String
-str s = s
-
-main = do interact str
+main = do
+	args <- getArgs
+	let (actions, nonOpts, errors) = getOpt Permute options args
+	opts <- foldl (>>=) (return defaultOptions) actions
+	let Options { optVerbose = verbose
+				, optHelp = help
+				, optCount = count
+				, optExt = ext
+				, optTotal = total
+				, optHuman = human 
+				, optAll = all } = opts
+	when help printHelp

@@ -5,8 +5,11 @@ import Control.Monad
 
 helpText :: String
 helpText = unlines 
-			[ "kvak"
-			, "brak"
+			[ "Usage exstat: [OPTIONS] directories..."
+			, "          --help      display program options"
+			, "          --version   display program version"
+			, "    -l    --follow    follow symbolic links (disabled by default)"
+			, "    -a    --all       include hidden files  (disabled by default)"			
 			]	
 
 data Options = Options	{ optVerbose :: Bool
@@ -19,13 +22,13 @@ data Options = Options	{ optVerbose :: Bool
 						} deriving (Show)
 
 defaultOptions :: Options
-defaultOptions = Options { optVerbose = False
-						 , optHelp = False
-						 , optAll = False
-						 , optTotal= False
-						 , optExt= False
-						 , optCount= False
-						 , optHuman= False
+defaultOptions = Options { optVerbose	= False
+						 , optHelp		= False
+						 , optAll		= False
+						 , optTotal		= False
+						 , optExt		= False
+						 , optCount		= False
+						 , optHuman		= False
 						 }
 
 printHelp :: IO ()

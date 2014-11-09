@@ -12,7 +12,16 @@ helpText = unlines
 			, "    -a    --all       include hidden files  (disabled by default)"			
 			]	
 
-data Options = Options	{ optVerbose :: Bool
+printHelp :: IO ()
+printHelp = putStr helpText
+
+versionText = unlines
+				[ "extstat v1.0" ]
+
+printVersion :: IO ()
+printVersion = putStr versionText
+
+data Options = Options	{ optVersion :: Bool
 						, optHelp :: Bool
 						, optAll :: Bool
 						, optHuman :: Bool
@@ -22,7 +31,7 @@ data Options = Options	{ optVerbose :: Bool
 						} deriving (Show)
 
 defaultOptions :: Options
-defaultOptions = Options { optVerbose	= False
+defaultOptions = Options { optVersion	= False
 						 , optHelp		= False
 						 , optAll		= False
 						 , optTotal		= False
@@ -31,28 +40,26 @@ defaultOptions = Options { optVerbose	= False
 						 , optHuman		= False
 						 }
 
-printHelp :: IO ()
-printHelp = putStrLn helpText
-
 options :: [OptDescr (Options -> IO Options)]
 options = 
 		[ Option 	"h" 	["help"]	   		(NoArg (\opts -> return opts { optHelp = True} )) 			"Help"
-		, Option 	"a" 	["all"]    			(NoArg (\opts -> return opts { optVerbose = True} )) 		"Hidden files"
-		, Option 	"v" 	["verbose"] 		(NoArg (\opts -> return opts { optVerbose = True} )) 		"Verbose"
-		, Option 	"e"	 	["extension"] 		(NoArg (\opts -> return opts { optVerbose = True} )) 		"Sort by extensions"
-		, Option 	"c" 	["count"] 			(NoArg (\opts -> return opts { optVerbose = True} )) 		"Sort by count of files"
-		, Option 	"t" 	["total"]			(NoArg (\opts -> return opts { optVerbose = True} )) 		"Show total number of files"
+		, Option 	"a" 	["all"]    			(NoArg (\opts -> return opts { optVersion = True} )) 		"Hidden files"
+		, Option 	"v" 	["version"] 		(NoArg (\opts -> return opts { optVersion = True} )) 		"Version"
+		, Option 	"e"	 	["extension"] 		(NoArg (\opts -> return opts { optVersion = True} )) 		"Sort by extensions"
+		, Option 	"c" 	["count"] 			(NoArg (\opts -> return opts { optVersion = True} )) 		"Sort by count of files"
+		, Option 	"t" 	["total"]			(NoArg (\opts -> return opts { optVersion = True} )) 		"Show total number of files"
 		]
 
 main = do
 	args <- getArgs
 	let (actions, nonOpts, errors) = getOpt Permute options args
 	opts <- foldl (>>=) (return defaultOptions) actions
-	let Options { optVerbose = verbose
+	let Options { optVersion = version
 				, optHelp = help
 				, optCount = count
 				, optExt = ext
 				, optTotal = total
 				, optHuman = human 
-				, optAll = all } = opts
+				, optAll = all } = opts	
 	when help printHelp
+	when version printVersion

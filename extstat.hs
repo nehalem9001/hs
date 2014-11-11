@@ -1,8 +1,8 @@
 --Haskell--
 import System.Console.GetOpt
+import System.Exit
+import System.Posix.Files
 import Data.List
-import Control.Applicative
-import Control.Monad
 import System.Environment
 import System.Directory
 import Control.Monad
@@ -49,8 +49,8 @@ options :: [OptDescr (Options -> IO Options)]
 options = 
 		[ Option 	"h" 	["help"]	   		(NoArg (\opts -> return opts { optHelp = True} )) 		"Help"
 		, Option 	"a" 	["all"]    			(NoArg (\opts -> return opts { optAll = True} )) 		"Include hidden files"
-		, Option 	"v" 	["version"] 		(NoArg (\opts -> return opts { optVersion = True} ))	"Version"
-		, Option 	"e"	 	["extension"] 		(NoArg (\opts -> return opts { optExt = True} )) 		"Sort by extensions"
+		, Option 	"v"		["version"]			(NoArg (\opts -> return opts { optVersion = True} ))	"Version"
+		, Option 	"e"		["extension"]		(NoArg (\opts -> return opts { optExt = True} )) 		"Sort by extensions"
 		, Option 	"c" 	["count"] 			(NoArg (\opts -> return opts { optCount = True} )) 		"Sort by count of files"
 		, Option 	"t" 	["total"]			(NoArg (\opts -> return opts { optTotal = True} )) 		"Show total number of files"
 		, Option 	"t" 	["human"]			(NoArg (\opts -> return opts { optHuman = True} )) 		"Show sizes in human readable form"
@@ -58,7 +58,7 @@ options =
 
 getDirectories :: [FilePath] -> (String -> Bool) -> IO [FilePath]
 getDirectories [] _ = return []
-getDirectories fplist flt = liftM2 (++) files $ dirs >>= return.filter (\x -> x /= "." && x /= ".." && (flt x)) >>= flip getDirectories flt
+getDirectories fplist flt = liftM2 (++) files $ liftM (filter (\x -> x /= "." && x /= ".." && flt x)) dirs >>= flip getDirectories flt
 							where
 								dirs 	= filterDirectoryContent fp flt doesDirectoryExist
 								files 	= filterDirectoryContent fp flt doesFileExist
@@ -67,15 +67,16 @@ getDirectories fplist flt = liftM2 (++) files $ dirs >>= return.filter (\x -> x 
 
 filterDirectoryContent :: [FilePath] -> (String -> Bool) -> (FilePath -> IO Bool) -> IO [FilePath]
 filterDirectoryContent [] flt _ = return []
-filterDirectoryContent fp flt g = filterM doesDirectoryExist fp
-								>>= mapM (\x -> getDirectoryContents x >>= return.filter (\x -> x /= "." && x /= ".." && (flt x)) >>= return.map (x++))
-								>>= return.concat
-								>>= filterM g
+filterDirectoryContent fp flt g = liftM concat 
+										(filterM doesDirectoryExist fp 
+											>>= mapM (\x -> liftM (map (x++)) (liftM (filter (\x -> x /= "." && x /= ".." && flt x)) (getDirectoryContents x))))
+											>>= filterM g
 
 main = do
 	args <- getArgs
 	let (actions, nonOpts, errors) = getOpt Permute options args
 	opts <- foldl (>>=) (return defaultOptions) actions
+
 	let Options { optVersion = version
 				, optHelp = help
 				, optCount = count
@@ -83,12 +84,15 @@ main = do
 				, optTotal = total
 				, optHuman = human 
 				, optAll = all } = opts	
-	when help printHelp
-	when version printVersion
-	let includeHidden = if all then (\_ -> True) else (\x -> head x /= '.')
+	
+	when help (printHelp >> exitSuccess)
+	when version (printVersion >> exitSuccess)
+
+	let includeHidden = if all then (const True) else (\x -> head x /= '.')
 	let dirs = last args
 	paths <- getDirectories [dirs] includeHidden
-	fileStatuses <- mapM getFileStatus paths
 	let extensions = groupBy (\p1 p2 -> snd p1 == snd p2).sortBy (\u v -> compare (snd u) (snd v)).filter (not.null.snd) $ map splitExtension paths
 	let sizes = map (\p -> (snd (head p), length p)) extensions
-	mapM (\p -> putStrLn ((show (fst p)) ++ " " ++ show (snd p))) (sortBy (\u v -> compare (snd u) (snd v)) sizes)
+	
+	fileSizes <- mapM getFileStatus paths	
+	mapM (\p -> putStrLn (show (fst p) ++ " " ++ show (snd p))) (sortBy (\u v -> compare (snd u) (snd v)) sizes)

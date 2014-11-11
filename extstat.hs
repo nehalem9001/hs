@@ -57,7 +57,7 @@ getDirectories :: [FilePath] -> IO [FilePath]
 getDirectories [] = return []
 getDirectories fplist = liftM2 (++) files $ dirs >>= return.filter ((/= '.').head) >>= getDirectories
 							where
-								dirs 	= filterDirectoryContent fp doesDirectoryExist								
+								dirs 	= filterDirectoryContent fp doesDirectoryExist
 								files 	= filterDirectoryContent fp doesFileExist
 								fp 		= map (\p -> if last p /= '/' then p ++ "/" else p) fplist
 
@@ -66,7 +66,7 @@ filterDirectoryContent :: [FilePath] -> (FilePath -> IO Bool) -> IO [FilePath]
 filterDirectoryContent [] _ = return []
 filterDirectoryContent fp g = filterM doesDirectoryExist fp
 								>>= mapM (\x -> getDirectoryContents x >>= return.filter ((/= '.').head) >>= return.map (x++))
-								>>= return.concat											
+								>>= return.concat
 								>>= filterM g
 main = do
 	args <- getArgs

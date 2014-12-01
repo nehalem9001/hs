@@ -1,12 +1,13 @@
 --Haskell--
-import System.Console.GetOpt
-import System.Exit
-import System.Posix.Files
-import Data.List
-import System.Environment
-import System.Directory
+import Control.Applicative
 import Control.Monad
+import Data.List
+import System.Console.GetOpt
+import System.Directory
+import System.Environment
+import System.Exit
 import System.FilePath.Posix
+import System.Posix.Files
 
 helpText :: String
 helpText = unlines 
@@ -69,8 +70,11 @@ filterDirectoryContent :: [FilePath] -> (String -> Bool) -> (FilePath -> IO Bool
 filterDirectoryContent [] flt _ = return []
 filterDirectoryContent fp flt g = liftM concat 
 										(filterM doesDirectoryExist fp 
-											>>= mapM (\x -> liftM (map (x++)) (liftM (filter (\x -> x /= "." && x /= ".." && flt x)) (getDirectoryContents x))))
+											>>= mapM (\x -> liftM (map (x++).filter (\x -> x /= "." && x /= ".." && flt x)) (getDirectoryContents x)))
 											>>= filterM g
+
+makeTriples :: [FilePath] -> IO [(String, Int, Int)]
+makeTriples = undefined
 
 main = do
 	args <- getArgs
@@ -88,11 +92,11 @@ main = do
 	when help (printHelp >> exitSuccess)
 	when version (printVersion >> exitSuccess)
 
-	let includeHidden = if all then (const True) else (\x -> head x /= '.')
+	let includeHidden = if all then const True else (\x -> head x /= '.')
 	let dirs = last args
 	paths <- getDirectories [dirs] includeHidden
 	let extensions = groupBy (\p1 p2 -> snd p1 == snd p2).sortBy (\u v -> compare (snd u) (snd v)).filter (not.null.snd) $ map splitExtension paths
-	let sizes = map (\p -> (snd (head p), length p)) extensions
-	
-	fileSizes <- mapM getFileStatus paths	
+	let sizes = map (\p -> (snd (head p), length p)) extensions	
+	fileStatuses <- mapM getFileStatus paths
+	return $ map fileSize fileStatuses
 	mapM (\p -> putStrLn (show (fst p) ++ " " ++ show (snd p))) (sortBy (\u v -> compare (snd u) (snd v)) sizes)
